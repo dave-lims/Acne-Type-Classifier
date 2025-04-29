@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Skin Analysis App
 
-## Getting Started
+A web application that uses AI to analyze skin conditions and classify different types of acne. The app uses TensorFlow.js and MobileNet for image classification.
 
-First, run the development server:
+## Features
 
+- Real-time webcam capture for skin analysis
+- Image upload functionality
+- AI-powered acne classification
+- Support for multiple acne types:
+  - Whiteheads
+  - Blackheads
+  - Papules
+  - Pustules
+  - Nodules
+  - Cysts
+  - Normal skin
+
+## Prerequisites
+
+- Node.js (v18 or later)
+- npm or yarn
+- Webcam (for real-time analysis)
+
+## Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd skin-analyzer
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Start the development server:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The application will be available at `http://localhost:3000`.
 
-## Learn More
+## Training the Model
 
-To learn more about Next.js, take a look at the following resources:
+To train the model with your own dataset, follow these steps:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Prepare your dataset:
+   - Create the following directory structure in `src/training/data/`:
+     ```
+     src/training/data/
+     ├── whitehead/
+     ├── blackhead/
+     ├── papule/
+     ├── pustule/
+     ├── nodule/
+     ├── cyst/
+     └── normal/
+     ```
+   - Add images to each directory (recommended: 50-100 images per category)
+   - Image requirements:
+     - High-quality, well-lit photos
+     - Clear view of the affected area
+     - Consistent image sizes (will be resized to 224x224)
+     - Various skin tones and lighting conditions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. Install training dependencies:
+```bash
+npm install @tensorflow/tfjs-node @types/node
+```
 
-## Deploy on Vercel
+3. Run the training script:
+```bash
+npx ts-node src/training/train.ts
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The training process will:
+- Load and preprocess your images
+- Fine-tune the MobileNet model
+- Save the trained model to `src/models/acne-classifier/`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Training parameters:
+- Epochs: 10
+- Batch size: 32
+- Validation split: 20%
+- Learning rate: 0.001
+
+## Usage
+
+1. Open the application in your web browser
+2. Choose one of two options:
+   - Click "Take Photo" to capture an image using your webcam
+   - Click "Upload Photo" to select an image from your device
+3. The app will analyze the image and display:
+   - The detected acne type
+   - Confidence level for each prediction
+
+## Model Architecture
+
+The application uses a fine-tuned MobileNet model:
+1. Base MobileNet model for feature extraction
+2. Additional dense layers for acne classification
+3. Dropout layer to prevent overfitting
+4. Softmax activation for multi-class classification
+
+## Troubleshooting
+
+If you encounter issues:
+1. Ensure your webcam is properly connected and accessible
+2. Check that images are in supported formats (JPG, PNG)
+3. Verify sufficient lighting for accurate analysis
+4. Clear browser cache if the model fails to load
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
