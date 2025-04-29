@@ -26,8 +26,8 @@ A web application that uses AI to analyze skin conditions and classify different
 
 1. Clone the repository:
 ```bash
-https://github.com/Startup-Consulting-Inc/Acne-Type-Classifier.git
-cd skin-analyzer
+https://github.com/jsong1004/Acne-Type-Classifier.git
+cd Acne-Tyoe-Classifier
 ```
 
 2. Install dependencies:
