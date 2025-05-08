@@ -13,74 +13,97 @@ const ACNE_TYPES = [
 ];
 
 export const useSkinAnalysis = () => {
-  const [model, setModel] = useState<tf.LayersModel | null>(null);
+  const [classifierModel, setClassifierModel] = useState<tf.LayersModel | null>(null);
+  const [mobilenetModel, setMobilenetModel] = useState<mobilenet.MobileNet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [predictions, setPredictions] = useState<Array<{ className: string; probability: number }>>([]);
+  const [currentAnalysis, setCurrentAnalysis] = useState<{
+    topPrediction: { className: string; probability: number } | null;
+    allPredictions: Array<{ className: string; probability: number }>;
+  }>({
+    topPrediction: null,
+    allPredictions: []
+  });
 
   useEffect(() => {
-    const loadModel = async () => {
+    const loadModels = async () => {
       try {
         await tf.ready();
-        // Try to load the fine-tuned model first
-        try {
-          const loadedModel = await tf.loadLayersModel('/models/acne-classifier/model.json');
-          setModel(loadedModel);
-        } catch (err) {
-          console.warn('Could not load fine-tuned model, falling back to MobileNet');
-          const baseModel = await mobilenet.load();
-          setModel((baseModel as any).model);
-        }
+        // Load the fine-tuned classifier model
+        const loadedClassifier = await tf.loadLayersModel('/models/acne-classifier/model.json');
+        setClassifierModel(loadedClassifier);
+        // Load MobileNet for feature extraction
+        const loadedMobileNet = await mobilenet.load();
+        setMobilenetModel(loadedMobileNet);
         setLoading(false);
       } catch (err) {
-        setError('Failed to load the model');
+        setError('Failed to load the models');
         setLoading(false);
       }
     };
+    loadModels();
+  }, []);
 
-    loadModel();
+  const clearAnalysis = useCallback(() => {
+    setCurrentAnalysis({
+      topPrediction: null,
+      allPredictions: []
+    });
+    setError(null);
   }, []);
 
   const analyzeImage = useCallback(async (image: HTMLImageElement | HTMLVideoElement) => {
-    if (!model) {
-      setError('Model not loaded');
+    if (!classifierModel || !mobilenetModel) {
+      setError('Models not loaded');
       return;
     }
 
     try {
+      clearAnalysis();
       // Preprocess the image
       const tensor = tf.browser.fromPixels(image)
         .resizeBilinear([224, 224])
         .div(255.0)
         .expandDims(0);
 
-      // Make prediction
-      const predictions = await model.predict(tensor) as tf.Tensor;
+      // Extract features using MobileNet
+      const features = mobilenetModel.infer(tensor, true) as tf.Tensor;
+      // Pass features to classifier model
+      const predictions = await classifierModel.predict(features) as tf.Tensor;
       const data = await predictions.data();
-      
+
       // Convert predictions to readable format
-      const results = Array.from(data).map((probability, index) => ({
-        className: ACNE_TYPES[index],
-        probability
-      }));
+      const results = Array.from(data).map((probability, index) => {
+        const className = ACNE_TYPES[index];
+        const confidence = Math.min(Math.max(probability * 100, 0), 100);
+        return {
+          className,
+          probability: confidence
+        };
+      });
 
       // Sort by probability
       results.sort((a, b) => b.probability - a.probability);
-      setPredictions(results);
 
-      // Clean up
+      setCurrentAnalysis({
+        topPrediction: results[0],
+        allPredictions: results
+      });
+
       tensor.dispose();
+      features.dispose();
       predictions.dispose();
     } catch (err) {
       setError('Failed to analyze image');
     }
-  }, [model]);
+  }, [classifierModel, mobilenetModel, clearAnalysis]);
 
   return {
-    model,
+    model: classifierModel,
     loading,
     error,
-    predictions,
+    currentAnalysis,
     analyzeImage,
+    clearAnalysis
   };
 }; 
